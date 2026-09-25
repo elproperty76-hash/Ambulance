@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   AmbulanceTrip,
   DriverMaster,
@@ -28,6 +28,7 @@ import {
   BellRing,
   Zap,
   Radio,
+  Gauge,
 } from 'lucide-react';
 import { formatRupiah, formatDateIndo } from '../utils/storage';
 
@@ -73,6 +74,23 @@ export const LiveOperationsTab: React.FC<LiveOperationsTabProps> = ({
     const todayStr = new Date().toISOString().split('T')[0];
     return t.requestDate === todayStr && t.status === 'selesai';
   }).length;
+
+  const completedTripsList = useMemo(() => {
+    return trips.filter((t) => t.status === 'selesai');
+  }, [trips]);
+
+  const totalCompletedKm = useMemo(() => {
+    return completedTripsList.reduce((sum, t) => {
+      if (t.bbm?.totalKm && t.bbm.totalKm > 0) return sum + t.bbm.totalKm;
+      if (t.bbm?.kmAkhir && t.bbm?.kmAwal && t.bbm.kmAkhir > t.bbm.kmAwal) {
+        return sum + (t.bbm.kmAkhir - t.bbm.kmAwal);
+      }
+      if (t.tujuan?.jarakKm && t.tujuan.jarakKm > 0) {
+        return sum + (t.tujuan.jarakKm * (t.tujuan.isPulangPergi !== false ? 2 : 1));
+      }
+      return sum;
+    }, 0);
+  }, [completedTripsList]);
 
   const totalBbmMonth = trips
     .filter((t) => t.status === 'selesai')
@@ -223,27 +241,21 @@ export const LiveOperationsTab: React.FC<LiveOperationsTabProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] text-slate-300 pt-1.5 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-slate-300 pt-1.5 border-t border-slate-800 gap-1">
           <span className="flex items-center text-slate-400">
             <MapPin className="w-3 h-3 text-red-400 mr-1" />
             Pool: Posko Masjid Jami Al Adnan
           </span>
-          <span className="text-slate-400 font-mono">
-            Spido: {fleet.kmSpidometer.toLocaleString('id-ID')} KM
-          </span>
+          <div className="flex items-center space-x-2 font-mono">
+            <span className="text-slate-400">
+              Spido: {fleet.kmSpidometer.toLocaleString('id-ID')} KM
+            </span>
+            <span className="text-slate-600">•</span>
+            <span className="text-amber-400 font-bold">
+              Total Selesai: {totalCompletedKm.toLocaleString('id-ID')} KM ({completedTripsList.length} Trip)
+            </span>
+          </div>
         </div>
-      </div>
-
-      {/* Emergency Quick Action Bar */}
-      <div className="flex items-center gap-2">
-        <button
-          id="btn-quick-new-trip"
-          onClick={onNavigateToInput}
-          className="flex-1 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold text-xs py-2.5 px-3 rounded-lg shadow-xs flex items-center justify-center space-x-1.5 transition-colors cursor-pointer border border-red-500"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Input Permintaan Ambulance Baru</span>
-        </button>
       </div>
 
       {/* Active Trips Section */}

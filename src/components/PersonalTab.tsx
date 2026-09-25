@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   AuthSession,
   DriverMaster,
@@ -36,6 +36,12 @@ import {
   Download,
   Database,
   Cloud,
+  Gauge,
+  TrendingUp,
+  Activity,
+  Sparkles,
+  Navigation,
+  Fuel,
 } from 'lucide-react';
 
 interface PersonalTabProps {
@@ -128,6 +134,36 @@ export const PersonalTab: React.FC<PersonalTabProps> = ({
 
   // Trips Management Filter
   const [tripSearch, setTripSearch] = useState<string>('');
+
+  // Cumulative Mileage (KM) Calculation from COMPLETED trips
+  const completedTrips = useMemo(() => {
+    return trips.filter((t) => t.status === 'selesai');
+  }, [trips]);
+
+  const totalCumulativeKm = useMemo(() => {
+    return completedTrips.reduce((sum, t) => {
+      if (t.bbm?.totalKm && t.bbm.totalKm > 0) return sum + t.bbm.totalKm;
+      if (t.bbm?.kmAkhir && t.bbm?.kmAwal && t.bbm.kmAkhir > t.bbm.kmAwal) {
+        return sum + (t.bbm.kmAkhir - t.bbm.kmAwal);
+      }
+      if (t.tujuan?.jarakKm && t.tujuan.jarakKm > 0) {
+        return sum + (t.tujuan.jarakKm * (t.tujuan.isPulangPergi !== false ? 2 : 1));
+      }
+      return sum;
+    }, 0);
+  }, [completedTrips]);
+
+  const totalCompletedBbmLiter = useMemo(() => {
+    return completedTrips.reduce((sum, t) => sum + (t.bbm?.liter || 0), 0);
+  }, [completedTrips]);
+
+  const totalCompletedBbmBiaya = useMemo(() => {
+    return completedTrips.reduce((sum, t) => sum + (t.bbm?.biayaBbm || 0), 0);
+  }, [completedTrips]);
+
+  const avgKmPerCompletedTrip = completedTrips.length > 0
+    ? (totalCumulativeKm / completedTrips.length).toFixed(1)
+    : '0';
 
   // Role Authentication Guard: Authenticated users in Personal feature have operational management authority
   const isPengurus =
@@ -403,6 +439,119 @@ export const PersonalTab: React.FC<PersonalTabProps> = ({
         </div>
       </div>
 
+      {/* Cumulative Vehicle Mileage (KM) Monitoring Dashboard Card */}
+      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-2 border-red-500/30 rounded-2xl p-3.5 shadow-md text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-red-600/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-700/60">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 rounded-lg bg-red-600/90 text-white flex items-center justify-center shadow-xs">
+              <Gauge className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-1.5">
+                <h3 className="text-xs font-bold text-white tracking-wide uppercase">
+                  Pemantauan Jarak Tempuh Kendaraan Kumulatif
+                </h3>
+                <span className="text-[8.5px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.2 rounded-full">
+                  Trip Selesai
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-300">
+                Total akumulasi jarak tempuh dinas dari seluruh perjalanan ambulance yang berstatus selesai
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono font-bold bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">
+            {fleet.platNomor}
+          </span>
+        </div>
+
+        {/* Big Number & KPI Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-2.5">
+          <div className="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/80 flex flex-col justify-between">
+            <span className="text-[9.5px] text-slate-400 font-medium flex items-center">
+              <TrendingUp className="w-3 h-3 text-red-400 mr-1" />
+              Total KM Kumulatif
+            </span>
+            <div className="mt-1">
+              <span className="text-xl font-extrabold text-amber-300 font-mono tracking-tight">
+                {totalCumulativeKm.toLocaleString('id-ID')}
+              </span>
+              <span className="text-xs font-bold text-slate-400 ml-1">KM</span>
+            </div>
+            <span className="text-[8.5px] text-emerald-400 font-medium mt-0.5">
+              ✓ Terverifikasi Operasional
+            </span>
+          </div>
+
+          <div className="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/80 flex flex-col justify-between">
+            <span className="text-[9.5px] text-slate-400 font-medium flex items-center">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400 mr-1" />
+              Total Trip Selesai
+            </span>
+            <div className="mt-1">
+              <span className="text-xl font-extrabold text-white font-mono tracking-tight">
+                {completedTrips.length}
+              </span>
+              <span className="text-xs font-bold text-slate-400 ml-1">Trip</span>
+            </div>
+            <span className="text-[8.5px] text-slate-400 font-medium mt-0.5">
+              dari {trips.length} total tiket
+            </span>
+          </div>
+
+          <div className="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/80 flex flex-col justify-between">
+            <span className="text-[9.5px] text-slate-400 font-medium flex items-center">
+              <Activity className="w-3 h-3 text-blue-400 mr-1" />
+              Rata-rata / Trip
+            </span>
+            <div className="mt-1">
+              <span className="text-xl font-extrabold text-blue-300 font-mono tracking-tight">
+                {avgKmPerCompletedTrip}
+              </span>
+              <span className="text-xs font-bold text-slate-400 ml-1">KM</span>
+            </div>
+            <span className="text-[8.5px] text-slate-400 font-medium mt-0.5">
+              perjalanan pulang pergi
+            </span>
+          </div>
+
+          <div className="bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/80 flex flex-col justify-between">
+            <span className="text-[9.5px] text-slate-400 font-medium flex items-center">
+              <Fuel className="w-3 h-3 text-amber-400 mr-1" />
+              Akumulasi BBM
+            </span>
+            <div className="mt-1">
+              <span className="text-xl font-extrabold text-amber-200 font-mono tracking-tight">
+                {totalCompletedBbmLiter.toFixed(1)}
+              </span>
+              <span className="text-xs font-bold text-slate-400 ml-1">Liter</span>
+            </div>
+            <span className="text-[8.5px] text-slate-400 font-medium mt-0.5 truncate">
+              {formatRupiah(totalCompletedBbmBiaya)}
+            </span>
+          </div>
+        </div>
+
+        {/* Comparison Strip: Odometer Spidometer vs Cumulative Km */}
+        <div className="bg-slate-950/60 rounded-xl p-2 border border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between text-[10.5px] text-slate-300 gap-1.5">
+          <div className="flex items-center space-x-2">
+            <Car className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <span>
+              Armada: <strong className="text-white">{fleet.namaUnit}</strong> ({fleet.platNomor})
+            </span>
+          </div>
+          <div className="flex items-center space-x-3 text-[10px] font-mono">
+            <span className="text-slate-400">
+              Spidometer Odometer: <strong className="text-white">{(fleet.kmSpidometer || 0).toLocaleString('id-ID')} KM</strong>
+            </span>
+            <span className="text-amber-400">
+              Total Tempuh Selesai: <strong className="text-amber-300">{totalCumulativeKm.toLocaleString('id-ID')} KM</strong>
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Sub-Navigation Tabs inside Personal */}
       <div className="bg-white border border-slate-200 rounded-xl p-1 shadow-xs flex items-center gap-1 overflow-x-auto scrollbar-none">
         <button
@@ -450,6 +599,7 @@ export const PersonalTab: React.FC<PersonalTabProps> = ({
             relawan={relawan}
             fleet={fleet}
             fleets={fleets}
+            trips={trips}
             callCenters={callCenters}
             tariffConfig={tariffConfig}
             isPengurus={isPengurus}

@@ -68,8 +68,79 @@ export const MonthlyReportTab: React.FC<MonthlyReportTabProps> = ({
   const [loginError, setLoginError] = useState<string>('');
   const [isSubmittingLogin, setIsSubmittingLogin] = useState<boolean>(false);
 
-  // Select Month & Year
-  const [selectedMonthYear, setSelectedMonthYear] = useState<string>('2026-08');
+  // Select Month & Year (defaults to latest available trip or current month/2026-08)
+  const [selectedMonthYear, setSelectedMonthYear] = useState<string>(() => {
+    if (trips && trips.length > 0) {
+      const sorted = [...trips].sort((a, b) =>
+        (b.requestDate || '').localeCompare(a.requestDate || '')
+      );
+      if (sorted[0]?.requestDate && sorted[0].requestDate.length >= 7) {
+        return sorted[0].requestDate.substring(0, 7);
+      }
+    }
+    return '2026-08';
+  });
+
+  // Dynamic Month & Year options up to December 2035 + any saved trip data
+  const availableMonthOptions = useMemo(() => {
+    const monthNames = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+
+    // Count trips per month YYYY-MM from saved data
+    const tripCountMap: Record<string, number> = {};
+    let minYear = 2024;
+    let maxYear = 2035;
+
+    trips.forEach((t) => {
+      if (t.requestDate && t.requestDate.length >= 7) {
+        const ym = t.requestDate.substring(0, 7);
+        tripCountMap[ym] = (tripCountMap[ym] || 0) + 1;
+        const y = parseInt(ym.substring(0, 4), 10);
+        if (!isNaN(y)) {
+          if (y < minYear) minYear = y;
+          if (y > maxYear) maxYear = y;
+        }
+      }
+    });
+
+    const groups: {
+      year: number;
+      months: { value: string; label: string; count: number }[];
+    }[] = [];
+
+    for (let year = maxYear; year >= minYear; year--) {
+      const yearMonths: { value: string; label: string; count: number }[] = [];
+      for (let m = 12; m >= 1; m--) {
+        const mStr = m.toString().padStart(2, '0');
+        const val = `${year}-${mStr}`;
+        const count = tripCountMap[val] || 0;
+        const countSuffix = count > 0 ? ` (${count} Trip)` : '';
+        yearMonths.push({
+          value: val,
+          label: `${monthNames[m - 1]} ${year}${countSuffix}`,
+          count,
+        });
+      }
+      groups.push({
+        year,
+        months: yearMonths,
+      });
+    }
+
+    return groups;
+  }, [trips]);
 
   // Filter trips by month (Hooks must be called in the exact same order on every render)
   const monthlyTrips = useMemo(() => {
@@ -419,16 +490,21 @@ export const MonthlyReportTab: React.FC<MonthlyReportTabProps> = ({
           </div>
 
           <div className="flex items-center space-x-1.5">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <select
               value={selectedMonthYear}
               onChange={(e) => setSelectedMonthYear(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs text-slate-800 focus:outline-none focus:border-red-600 font-semibold"
+              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:border-red-600 font-semibold max-w-[210px]"
             >
-              <option value="2026-08">Agustus 2026</option>
-              <option value="2026-07">Juli 2026</option>
-              <option value="2026-06">Juni 2026</option>
-              <option value="2026-05">Mei 2026</option>
+              {availableMonthOptions.map((grp) => (
+                <optgroup key={grp.year} label={`Tahun ${grp.year}`}>
+                  {grp.months.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
             </select>
           </div>
         </div>

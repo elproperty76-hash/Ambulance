@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   DriverMaster,
   RelawanMaster,
   FleetVehicle,
   CallCenterContact,
   TariffConfig,
+  AmbulanceTrip,
 } from '../types';
 import { HOSPITAL_LIST, INITIAL_TARIFF_CONFIG } from '../data/mockData';
 import { EditFleetModal } from './EditFleetModal';
@@ -50,6 +51,7 @@ interface TeamAndFleetTabProps {
   relawan: RelawanMaster[];
   fleet: FleetVehicle;
   fleets?: FleetVehicle[];
+  trips?: AmbulanceTrip[];
   callCenters?: CallCenterContact[];
   tariffConfig?: TariffConfig;
   isPengurus?: boolean;
@@ -79,6 +81,7 @@ export const TeamAndFleetTab: React.FC<TeamAndFleetTabProps> = ({
   relawan,
   fleet,
   fleets = [],
+  trips = [],
   callCenters = [],
   tariffConfig = INITIAL_TARIFF_CONFIG,
   isPengurus = false,
@@ -102,6 +105,24 @@ export const TeamAndFleetTab: React.FC<TeamAndFleetTabProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<
     'callcenters' | 'tariff' | 'drivers' | 'relawan' | 'fleet' | 'hospitals'
   >('callcenters');
+
+  // Cumulative Completed Mileage Calculation
+  const completedTrips = useMemo(() => {
+    return trips.filter((t) => t.status === 'selesai');
+  }, [trips]);
+
+  const totalCumulativeKm = useMemo(() => {
+    return completedTrips.reduce((sum, t) => {
+      if (t.bbm?.totalKm && t.bbm.totalKm > 0) return sum + t.bbm.totalKm;
+      if (t.bbm?.kmAkhir && t.bbm?.kmAwal && t.bbm.kmAkhir > t.bbm.kmAwal) {
+        return sum + (t.bbm.kmAkhir - t.bbm.kmAwal);
+      }
+      if (t.tujuan?.jarakKm && t.tujuan.jarakKm > 0) {
+        return sum + (t.tujuan.jarakKm * (t.tujuan.isPulangPergi !== false ? 2 : 1));
+      }
+      return sum;
+    }, 0);
+  }, [completedTrips]);
 
   // Guard helper to enforce Pengurus authority
   const ensurePengurus = (actionTitle: string, actionFn: () => void) => {
@@ -1180,6 +1201,55 @@ export const TeamAndFleetTab: React.FC<TeamAndFleetTabProps> = ({
       {/* 5. FLEET SUB-TAB */}
       {activeSubTab === 'fleet' && (
         <div className="space-y-3 animate-in fade-in duration-150">
+          {/* Cumulative Mileage Fleet Overview Banner */}
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-xs">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-7 h-7 rounded-lg bg-red-600/90 text-white flex items-center justify-center shadow-2xs">
+                  <Gauge className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                    Pemantauan Jarak Tempuh Armada Kumulatif
+                  </h4>
+                  <p className="text-[9.5px] text-slate-300">
+                    Akumulasi jarak tempuh riil dihitung dari seluruh perjalanan dinas selesai
+                  </p>
+                </div>
+              </div>
+              <span className="text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                {completedTrips.length} Trip Selesai
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-800 text-center">
+              <div className="bg-slate-800/80 rounded-lg p-1.5 border border-slate-700/60">
+                <span className="text-[9px] text-slate-400 block">Total KM Kumulatif:</span>
+                <strong className="text-sm font-extrabold text-amber-300 font-mono">
+                  {totalCumulativeKm.toLocaleString('id-ID')} KM
+                </strong>
+              </div>
+              <div className="bg-slate-800/80 rounded-lg p-1.5 border border-slate-700/60">
+                <span className="text-[9px] text-slate-400 block">Trip Selesai:</span>
+                <strong className="text-sm font-extrabold text-white font-mono">
+                  {completedTrips.length}
+                </strong>
+              </div>
+              <div className="bg-slate-800/80 rounded-lg p-1.5 border border-slate-700/60">
+                <span className="text-[9px] text-slate-400 block">Rata-rata Jarak:</span>
+                <strong className="text-sm font-extrabold text-blue-300 font-mono">
+                  {completedTrips.length > 0 ? (totalCumulativeKm / completedTrips.length).toFixed(1) : '0'} KM
+                </strong>
+              </div>
+              <div className="bg-slate-800/80 rounded-lg p-1.5 border border-slate-700/60">
+                <span className="text-[9px] text-slate-400 block">Spido Terkini:</span>
+                <strong className="text-sm font-extrabold text-emerald-300 font-mono">
+                  {(fleet.kmSpidometer || 0).toLocaleString('id-ID')} KM
+                </strong>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs flex items-center justify-between">
             <div>
               <h3 className="text-xs font-bold text-slate-900 flex items-center">
@@ -1257,13 +1327,23 @@ export const TeamAndFleetTab: React.FC<TeamAndFleetTabProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                     <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
                       <span className="text-[10px] text-slate-500 block">
                         Kilometer Spidometer:
                       </span>
                       <strong className="text-slate-900 font-mono text-xs">
                         {(veh.kmSpidometer || 0).toLocaleString('id-ID')} KM
+                      </strong>
+                    </div>
+
+                    <div className="bg-amber-50/80 p-2 rounded-lg border border-amber-200">
+                      <span className="text-[10px] text-amber-900 font-semibold block flex items-center">
+                        <Gauge className="w-3 h-3 text-amber-600 mr-1" />
+                        Total KM Trip Selesai:
+                      </span>
+                      <strong className="text-amber-900 font-mono text-xs">
+                        {totalCumulativeKm.toLocaleString('id-ID')} KM
                       </strong>
                     </div>
 
@@ -1299,7 +1379,7 @@ export const TeamAndFleetTab: React.FC<TeamAndFleetTabProps> = ({
                       </strong>
                     </div>
 
-                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 sm:col-span-2">
                       <span className="text-[10px] text-slate-500 block">
                         Penanggung Jawab Unit:
                       </span>

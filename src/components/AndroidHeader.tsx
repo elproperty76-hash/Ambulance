@@ -6,7 +6,6 @@ import {
   Radio,
   Clock,
   Sparkles,
-  Plus,
   RotateCcw,
   Database,
   Cloud,
@@ -14,7 +13,7 @@ import {
 
 interface AndroidHeaderProps {
   onQuickEmergency: () => void;
-  onNavigateToInput: () => void;
+  onNavigateToInput?: () => void;
   onNavigateToPersonal?: () => void;
   activeTripsCount: number;
   pendingTripsCount?: number;
@@ -103,7 +102,7 @@ export const AndroidHeader: React.FC<AndroidHeaderProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: Personal Admin, Input Baru, Hotline */}
+        {/* Action Buttons: Personal Admin, Hotline */}
         <div className="flex items-center space-x-1.5">
           {onNavigateToPersonal && (
             <button
@@ -126,16 +125,6 @@ export const AndroidHeader: React.FC<AndroidHeaderProps> = ({
               </span>
             </button>
           )}
-
-          <button
-            id="header-btn-new-trip"
-            onClick={onNavigateToInput}
-            title="Input Data Perjalanan Baru"
-            className="flex items-center space-x-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg border border-emerald-500 cursor-pointer transition-colors shadow-xs"
-          >
-            <Plus className="w-3 h-3" />
-            <span>Input Baru</span>
-          </button>
 
           <button
             id="btn-quick-call-emergency"
