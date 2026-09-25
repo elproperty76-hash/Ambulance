@@ -169,16 +169,19 @@ export const NewTripFormTab: React.FC<NewTripFormTabProps> = ({
 
   // Sync fuel and vehicle fees when tariffConfig changes
   useEffect(() => {
+    let price = tariffConfig.hargaPertalite;
     if (jenisBbm === 'Pertalite') {
-      setHargaBbmPerLiter(tariffConfig.hargaPertalite);
+      price = tariffConfig.hargaPertalite;
     } else if (jenisBbm === 'Pertamax') {
-      setHargaBbmPerLiter(tariffConfig.hargaPertamax);
+      price = tariffConfig.hargaPertamax;
     } else if (jenisBbm === 'Solar') {
-      setHargaBbmPerLiter(tariffConfig.hargaSolar);
+      price = tariffConfig.hargaSolar;
     } else if (jenisBbm === 'Dexlite') {
-      setHargaBbmPerLiter(tariffConfig.hargaDexlite);
+      price = tariffConfig.hargaDexlite;
     }
-  }, [jenisBbm, tariffConfig]);
+    setHargaBbmPerLiter(price);
+    setBiayaBbm(Math.round(literBbm * price));
+  }, [jenisBbm, tariffConfig, literBbm]);
 
   // Handler for changing Domisili Pemohon with automatic Biaya Kendaraan synchronization
   const handleSelectTipeWarga = (tipe: 'warga_bpa' | 'non_warga') => {
@@ -1543,12 +1546,10 @@ export const NewTripFormTab: React.FC<NewTripFormTabProps> = ({
                         type="number"
                         step="50"
                         value={hargaBbmPerLiter}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setHargaBbmPerLiter(val);
-                          setBiayaBbm(Math.round(literBbm * val));
-                        }}
-                        className="w-full bg-white border border-slate-300 rounded-lg pl-7 pr-2 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600 font-mono font-bold"
+                        readOnly
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 rounded-lg pl-7 pr-2 py-1.5 text-xs text-slate-500 font-mono font-bold cursor-not-allowed"
+                        title="Dihitung otomatis sesuai tarif sistem"
                       />
                     </div>
                   </div>
@@ -1579,8 +1580,10 @@ export const NewTripFormTab: React.FC<NewTripFormTabProps> = ({
                       type="number"
                       step="1000"
                       value={biayaBbm}
-                      onChange={(e) => setBiayaBbm(Number(e.target.value))}
-                      className="w-full bg-white border border-amber-300 rounded-lg px-2 py-1.5 text-xs text-amber-900 focus:outline-none focus:border-red-600 font-mono font-bold bg-amber-50/70"
+                      readOnly
+                      disabled
+                      className="w-full bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-500 font-mono font-bold cursor-not-allowed"
+                      title="Dihitung otomatis sesuai liter x tarif"
                     />
                   </div>
                 </div>
@@ -1720,12 +1723,10 @@ export const NewTripFormTab: React.FC<NewTripFormTabProps> = ({
                         type="number"
                         step="1000"
                         value={jasaSupir}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setJasaSupir(val);
-                          setBiayaOperasional(val + jasaRelawan);
-                        }}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-xs text-slate-800 font-mono font-bold"
+                        readOnly
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-500 font-mono font-bold cursor-not-allowed"
+                        title="Dihitung otomatis berdasarkan tarif sistem & jarak tempuh"
                       />
                     </div>
 
@@ -1742,12 +1743,10 @@ export const NewTripFormTab: React.FC<NewTripFormTabProps> = ({
                         type="number"
                         step="1000"
                         value={jasaRelawan}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setJasaRelawan(val);
-                          setBiayaOperasional(jasaSupir + val);
-                        }}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-xs text-slate-800 font-mono font-bold"
+                        readOnly
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-500 font-mono font-bold cursor-not-allowed"
+                        title="Dihitung otomatis berdasarkan tarif sistem & jarak tempuh"
                       />
                     </div>
                   </div>
