@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "FleetVehicle": {
+      "title": "Fleet Vehicle",
+      "description": "Ambulance fleet vehicle operational data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "platNomor": { "type": "string" },
+        "namaUnit": { "type": "string" },
+        "merk": { "type": "string" },
+        "tahun": { "type": "string" },
+        "status": { "type": "string" },
+        "lokasiStandby": { "type": "string" },
+        "kondisiOksigen": { "type": "string" },
+        "penanggungJawab": { "type": "string" },
+        "servisBerikutnya": { "type": "string" },
+        "isUtama": { "type": "boolean" },
+        "kelengkapan": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["platNomor", "namaUnit"]
+    },
+    "DriverMaster": {
+      "title": "Driver Master",
+      "description": "Registered roster ambulance drivers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "noHp": { "type": "string" },
+        "shift": { "type": "string" },
+        "alamatBpa": { "type": "string" },
+        "nomorSim": { "type": "string" },
+        "status": { "type": "string" },
+        "totalTugas": { "type": "number" }
+      },
+      "required": ["nama", "noHp"]
+    },
+    "RelawanMaster": {
+      "title": "Relawan Master",
+      "description": "Registered medical and operational volunteers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "noHp": { "type": "string" },
+        "peran": { "type": "string" },
+        "tim": { "type": "string" },
+        "keahlian": { "type": "string" },
+        "status": { "type": "string" },
+        "totalPendampingan": { "type": "number" }
+      },
+      "required": ["nama", "noHp"]
+    },
+    "CallCenterContact": {
+      "title": "Call Center Contact",
+      "description": "Emergency dispatch phone contacts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nama": { "type": "string" },
+        "peran": { "type": "string" },
+        "noHp": { "type": "string" },
+        "isUtama": { "type": "boolean" },
+        "aktif": { "type": "boolean" }
+      },
+      "required": ["nama", "noHp"]
+    },
+    "AmbulanceTrip": {
+      "title": "Ambulance Trip",
+      "description": "Operational ambulance mission and dispatch logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "kodeTugas": { "type": "string" },
+        "waktuPermintaan": { "type": "string" },
+        "jenisLayanan": { "type": "string" },
+        "namaPemohon": { "type": "string" },
+        "noHpPemohon": { "type": "string" },
+        "alamatPenjemputan": { "type": "string" },
+        "tujuanRumahSakit": { "type": "string" },
+        "namaPasien": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["kodeTugas", "waktuPermintaan"]
+    }
+  },
+  "firestore": {
+    "/fleets/{fleetId}": {
+      "schema": "FleetVehicle",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "/drivers/{driverId}": {
+      "schema": "DriverMaster",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "/relawan/{relawanId}": {
+      "schema": "RelawanMaster",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "/call_centers/{contactId}": {
+      "schema": "CallCenterContact",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "/trips/{tripId}": {
+      "schema": "AmbulanceTrip",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "/settings/{settingId}": {
+      "schema": "object",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    },
+    "/admin_users/{userId}": {
+      "schema": "object",
+      "allow": {
+        "read": "true",
+        "write": "true"
+      }
+    }
+  }
+}
