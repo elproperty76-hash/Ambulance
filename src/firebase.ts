@@ -1,6 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
-  initializeFirestore,
   getFirestore,
   collection,
   doc,
@@ -38,24 +37,10 @@ const customDbId =
     ? firebaseConfig.firestoreDatabaseId
     : undefined;
 
-// Initialize Firestore with forced long-polling to prevent WebSocket/streaming connection drops in browser iframe environments
-let firestoreInstance;
-try {
-  firestoreInstance = initializeFirestore(
-    app,
-    {
-      experimentalForceLongPolling: true,
-      ignoreUndefinedProperties: true,
-    },
-    customDbId
-  );
-} catch {
-  firestoreInstance = customDbId
-    ? getFirestore(app, customDbId)
-    : getFirestore(app);
-}
-
-export const db = firestoreInstance;
+// Initialize Firestore Instance strictly configured with database ID
+export const db = customDbId
+  ? getFirestore(app, customDbId)
+  : getFirestore(app);
 
 // Collection References
 const FLEETS_COL = 'fleets';
@@ -75,19 +60,32 @@ const handleSnapshotError = (entityName: string, err: any) => {
   console.warn(`${entityName} snapshot notice:`, err);
 };
 
-// Sanitize object for Firestore (remove undefined values to prevent Firestore errors)
-function sanitizeDoc<T extends Record<string, any>>(obj: T): T {
-  const result: any = {};
-  for (const [key, val] of Object.entries(obj)) {
-    if (val !== undefined) {
-      if (val && typeof val === 'object' && !Array.isArray(val) && !(val instanceof Date)) {
-        result[key] = sanitizeDoc(val);
-      } else {
-        result[key] = val;
+// Deep, recursive sanitizer for Firestore (converts undefined to null, handles nested objects & arrays)
+export function sanitizePayload<T>(input: T): T {
+  if (input === undefined) {
+    return null as any;
+  }
+  if (input === null) {
+    return null as any;
+  }
+  if (input instanceof Date) {
+    return input.toISOString() as any;
+  }
+  if (Array.isArray(input)) {
+    return input
+      .map((item) => sanitizePayload(item))
+      .filter((item) => item !== undefined) as any;
+  }
+  if (typeof input === 'object') {
+    const sanitized: Record<string, any> = {};
+    for (const [key, value] of Object.entries(input)) {
+      if (value !== undefined) {
+        sanitized[key] = sanitizePayload(value);
       }
     }
+    return sanitized as any;
   }
-  return result as T;
+  return input;
 }
 
 // Initial Cloud Seed Check
@@ -98,53 +96,73 @@ export async function initializeFirestoreData(): Promise<void> {
     const metaRef = doc(db, SETTINGS_COL, META_DOC);
     const metaSnap = await getDoc(metaRef);
 
-    if (!metaSnap.exists() || !metaSnap.data()?.isInitialized) {
-      isSeeding = true;
-      console.log('Bootstrapping initial operational data to Firestore...');
-      const batch = writeBatch(db);
+    // If metadata already indicates initialized, check if any collection is completely missing before seeding
+    if (metaSnap.exists() && metaSnap.data()?.isInitialized) {
+      return;
+    }
 
-      // Seed Fleets
-      const initialFleetList: FleetVehicle[] = [
-        { ...INITIAL_FLEET, id: 'fleet-01', isUtama: true },
-      ];
-      for (const f of initialFleetList) {
-        const id = f.id || 'fleet-01';
-        batch.set(doc(db, FLEETS_COL, id), sanitizeDoc(f));
-      }
+    // Check if data already exists in collections to prevent overwriting user data
+    const [fleetsSnap, driversSnap, tripsSnap] = await Promise.all([
+      getDocs(collection(db, FLEETS_COL)),
+      getDocs(collection(db, DRIVERS_COL)),
+      getDocs(collection(db, TRIPS_COL)),
+    ]);
 
-      // Seed Drivers
-      for (const d of INITIAL_DRIVERS) {
-        batch.set(doc(db, DRIVERS_COL, d.id), sanitizeDoc(d));
-      }
-
-      // Seed Relawan
-      for (const r of INITIAL_RELAWAN) {
-        batch.set(doc(db, RELAWAN_COL, r.id), sanitizeDoc(r));
-      }
-
-      // Seed Call Centers
-      for (const c of INITIAL_CALL_CENTERS) {
-        batch.set(doc(db, CALL_CENTERS_COL, c.id), sanitizeDoc(c));
-      }
-
-      // Seed Trips
-      for (const t of INITIAL_TRIPS) {
-        batch.set(doc(db, TRIPS_COL, t.id), sanitizeDoc(t));
-      }
-
-      // Seed Tariff
-      batch.set(doc(db, SETTINGS_COL, 'tariff'), sanitizeDoc(INITIAL_TARIFF_CONFIG));
-
-      // Mark Initialized
-      batch.set(metaRef, {
+    if (fleetsSnap.size > 0 || driversSnap.size > 0 || tripsSnap.size > 0) {
+      // Collections already have data, just mark metadata
+      await setDoc(metaRef, {
         isInitialized: true,
         initializedAt: new Date().toISOString(),
         version: '1.0.0',
       });
-
-      await batch.commit();
-      console.log('Initial Firestore data bootstrapped successfully.');
+      return;
     }
+
+    isSeeding = true;
+    console.log('Bootstrapping initial operational data to Firestore...');
+    const batch = writeBatch(db);
+
+    // Seed Fleets
+    const initialFleetList: FleetVehicle[] = [
+      { ...INITIAL_FLEET, id: 'fleet-01', isUtama: true },
+    ];
+    for (const f of initialFleetList) {
+      const id = f.id || 'fleet-01';
+      batch.set(doc(db, FLEETS_COL, id), sanitizePayload(f));
+    }
+
+    // Seed Drivers
+    for (const d of INITIAL_DRIVERS) {
+      batch.set(doc(db, DRIVERS_COL, d.id), sanitizePayload(d));
+    }
+
+    // Seed Relawan
+    for (const r of INITIAL_RELAWAN) {
+      batch.set(doc(db, RELAWAN_COL, r.id), sanitizePayload(r));
+    }
+
+    // Seed Call Centers
+    for (const c of INITIAL_CALL_CENTERS) {
+      batch.set(doc(db, CALL_CENTERS_COL, c.id), sanitizePayload(c));
+    }
+
+    // Seed Trips
+    for (const t of INITIAL_TRIPS) {
+      batch.set(doc(db, TRIPS_COL, t.id), sanitizePayload(t));
+    }
+
+    // Seed Tariff
+    batch.set(doc(db, SETTINGS_COL, 'tariff'), sanitizePayload(INITIAL_TARIFF_CONFIG));
+
+    // Mark Initialized
+    batch.set(metaRef, {
+      isInitialized: true,
+      initializedAt: new Date().toISOString(),
+      version: '1.0.0',
+    });
+
+    await batch.commit();
+    console.log('Initial Firestore data bootstrapped successfully.');
   } catch (err) {
     console.warn('Firestore initialization notice:', err);
   } finally {
@@ -160,7 +178,7 @@ export function subscribeFleets(callback: (fleets: FleetVehicle[]) => void): () 
     (snapshot) => {
       const list: FleetVehicle[] = [];
       snapshot.forEach((d) => {
-        list.push(d.data() as FleetVehicle);
+        list.push({ ...d.data(), id: d.id } as FleetVehicle);
       });
       callback(list);
     },
@@ -168,21 +186,25 @@ export function subscribeFleets(callback: (fleets: FleetVehicle[]) => void): () 
   );
 }
 
-export async function saveFleetCloud(fleet: FleetVehicle): Promise<void> {
+export async function saveFleetCloud(fleet: FleetVehicle): Promise<boolean> {
   try {
     const id = fleet.id || `fleet-${Date.now()}`;
-    const clean = sanitizeDoc({ ...fleet, id });
+    const clean = sanitizePayload({ ...fleet, id });
     await setDoc(doc(db, FLEETS_COL, id), clean);
+    return true;
   } catch (err) {
     console.error('Error saving fleet to Firestore:', err);
+    return false;
   }
 }
 
-export async function deleteFleetCloud(fleetId: string): Promise<void> {
+export async function deleteFleetCloud(fleetId: string): Promise<boolean> {
   try {
     await deleteDoc(doc(db, FLEETS_COL, fleetId));
+    return true;
   } catch (err) {
     console.error('Error deleting fleet from Firestore:', err);
+    return false;
   }
 }
 
@@ -194,7 +216,7 @@ export function subscribeDrivers(callback: (drivers: DriverMaster[]) => void): (
     (snapshot) => {
       const list: DriverMaster[] = [];
       snapshot.forEach((d) => {
-        list.push(d.data() as DriverMaster);
+        list.push({ ...d.data(), id: d.id } as DriverMaster);
       });
       callback(list);
     },
@@ -202,21 +224,25 @@ export function subscribeDrivers(callback: (drivers: DriverMaster[]) => void): (
   );
 }
 
-export async function saveDriverCloud(driver: DriverMaster): Promise<void> {
+export async function saveDriverCloud(driver: DriverMaster): Promise<boolean> {
   try {
     const id = driver.id || `drv-${Date.now()}`;
-    const clean = sanitizeDoc({ ...driver, id });
+    const clean = sanitizePayload({ ...driver, id });
     await setDoc(doc(db, DRIVERS_COL, id), clean);
+    return true;
   } catch (err) {
     console.error('Error saving driver to Firestore:', err);
+    return false;
   }
 }
 
-export async function deleteDriverCloud(driverId: string): Promise<void> {
+export async function deleteDriverCloud(driverId: string): Promise<boolean> {
   try {
     await deleteDoc(doc(db, DRIVERS_COL, driverId));
+    return true;
   } catch (err) {
     console.error('Error deleting driver from Firestore:', err);
+    return false;
   }
 }
 
@@ -228,7 +254,7 @@ export function subscribeRelawan(callback: (relawan: RelawanMaster[]) => void): 
     (snapshot) => {
       const list: RelawanMaster[] = [];
       snapshot.forEach((d) => {
-        list.push(d.data() as RelawanMaster);
+        list.push({ ...d.data(), id: d.id } as RelawanMaster);
       });
       callback(list);
     },
@@ -236,21 +262,25 @@ export function subscribeRelawan(callback: (relawan: RelawanMaster[]) => void): 
   );
 }
 
-export async function saveRelawanCloud(relawan: RelawanMaster): Promise<void> {
+export async function saveRelawanCloud(relawan: RelawanMaster): Promise<boolean> {
   try {
     const id = relawan.id || `rel-${Date.now()}`;
-    const clean = sanitizeDoc({ ...relawan, id });
+    const clean = sanitizePayload({ ...relawan, id });
     await setDoc(doc(db, RELAWAN_COL, id), clean);
+    return true;
   } catch (err) {
     console.error('Error saving relawan to Firestore:', err);
+    return false;
   }
 }
 
-export async function deleteRelawanCloud(relawanId: string): Promise<void> {
+export async function deleteRelawanCloud(relawanId: string): Promise<boolean> {
   try {
     await deleteDoc(doc(db, RELAWAN_COL, relawanId));
+    return true;
   } catch (err) {
     console.error('Error deleting relawan from Firestore:', err);
+    return false;
   }
 }
 
@@ -262,7 +292,7 @@ export function subscribeCallCenters(callback: (contacts: CallCenterContact[]) =
     (snapshot) => {
       const list: CallCenterContact[] = [];
       snapshot.forEach((d) => {
-        list.push(d.data() as CallCenterContact);
+        list.push({ ...d.data(), id: d.id } as CallCenterContact);
       });
       callback(list);
     },
@@ -270,21 +300,25 @@ export function subscribeCallCenters(callback: (contacts: CallCenterContact[]) =
   );
 }
 
-export async function saveCallCenterCloud(contact: CallCenterContact): Promise<void> {
+export async function saveCallCenterCloud(contact: CallCenterContact): Promise<boolean> {
   try {
     const id = contact.id || `cc-${Date.now()}`;
-    const clean = sanitizeDoc({ ...contact, id });
+    const clean = sanitizePayload({ ...contact, id });
     await setDoc(doc(db, CALL_CENTERS_COL, id), clean);
+    return true;
   } catch (err) {
     console.error('Error saving call center contact to Firestore:', err);
+    return false;
   }
 }
 
-export async function deleteCallCenterCloud(contactId: string): Promise<void> {
+export async function deleteCallCenterCloud(contactId: string): Promise<boolean> {
   try {
     await deleteDoc(doc(db, CALL_CENTERS_COL, contactId));
+    return true;
   } catch (err) {
     console.error('Error deleting call center contact from Firestore:', err);
+    return false;
   }
 }
 
@@ -296,7 +330,7 @@ export function subscribeTrips(callback: (trips: AmbulanceTrip[]) => void): () =
     (snapshot) => {
       const list: AmbulanceTrip[] = [];
       snapshot.forEach((d) => {
-        list.push(d.data() as AmbulanceTrip);
+        list.push({ ...d.data(), id: d.id } as AmbulanceTrip);
       });
       list.sort((a, b) => {
         const timeA = new Date(a.createdAt || a.requestDate).getTime();
@@ -309,21 +343,25 @@ export function subscribeTrips(callback: (trips: AmbulanceTrip[]) => void): () =
   );
 }
 
-export async function saveTripCloud(trip: AmbulanceTrip): Promise<void> {
+export async function saveTripCloud(trip: AmbulanceTrip): Promise<boolean> {
   try {
     const id = trip.id || `trip-${Date.now()}`;
-    const clean = sanitizeDoc({ ...trip, id });
+    const clean = sanitizePayload({ ...trip, id });
     await setDoc(doc(db, TRIPS_COL, id), clean);
+    return true;
   } catch (err) {
     console.error('Error saving trip to Firestore:', err);
+    return false;
   }
 }
 
-export async function deleteTripCloud(tripId: string): Promise<void> {
+export async function deleteTripCloud(tripId: string): Promise<boolean> {
   try {
     await deleteDoc(doc(db, TRIPS_COL, tripId));
+    return true;
   } catch (err) {
     console.error('Error deleting trip from Firestore:', err);
+    return false;
   }
 }
 
@@ -341,17 +379,19 @@ export function subscribeTariff(callback: (tariff: TariffConfig) => void): () =>
   );
 }
 
-export async function saveTariffCloud(tariff: TariffConfig): Promise<void> {
+export async function saveTariffCloud(tariff: TariffConfig): Promise<boolean> {
   try {
-    const clean = sanitizeDoc(tariff);
+    const clean = sanitizePayload(tariff);
     await setDoc(doc(db, SETTINGS_COL, 'tariff'), clean);
+    return true;
   } catch (err) {
     console.error('Error saving tariff to Firestore:', err);
+    return false;
   }
 }
 
 // ---------------- CLOUD RESET & BULK UTILS ----------------
-export async function clearAllTripsCloud(): Promise<void> {
+export async function clearAllTripsCloud(): Promise<boolean> {
   try {
     const snap = await getDocs(collection(db, TRIPS_COL));
     const batch = writeBatch(db);
@@ -359,12 +399,14 @@ export async function clearAllTripsCloud(): Promise<void> {
       batch.delete(d.ref);
     });
     await batch.commit();
+    return true;
   } catch (err) {
     console.error('Error clearing trips in Firestore:', err);
+    return false;
   }
 }
 
-export async function resetAllDataCloud(): Promise<void> {
+export async function resetAllDataCloud(): Promise<boolean> {
   try {
     const batch = writeBatch(db);
 
@@ -383,30 +425,32 @@ export async function resetAllDataCloud(): Promise<void> {
     ];
     for (const f of initialFleetList) {
       const id = f.id || 'fleet-01';
-      batch.set(doc(db, FLEETS_COL, id), sanitizeDoc(f));
+      batch.set(doc(db, FLEETS_COL, id), sanitizePayload(f));
     }
 
     for (const d of INITIAL_DRIVERS) {
-      batch.set(doc(db, DRIVERS_COL, d.id), sanitizeDoc(d));
+      batch.set(doc(db, DRIVERS_COL, d.id), sanitizePayload(d));
     }
 
     for (const r of INITIAL_RELAWAN) {
-      batch.set(doc(db, RELAWAN_COL, r.id), sanitizeDoc(r));
+      batch.set(doc(db, RELAWAN_COL, r.id), sanitizePayload(r));
     }
 
     for (const c of INITIAL_CALL_CENTERS) {
-      batch.set(doc(db, CALL_CENTERS_COL, c.id), sanitizeDoc(c));
+      batch.set(doc(db, CALL_CENTERS_COL, c.id), sanitizePayload(c));
     }
 
     for (const t of INITIAL_TRIPS) {
-      batch.set(doc(db, TRIPS_COL, t.id), sanitizeDoc(t));
+      batch.set(doc(db, TRIPS_COL, t.id), sanitizePayload(t));
     }
 
-    batch.set(doc(db, SETTINGS_COL, 'tariff'), sanitizeDoc(INITIAL_TARIFF_CONFIG));
+    batch.set(doc(db, SETTINGS_COL, 'tariff'), sanitizePayload(INITIAL_TARIFF_CONFIG));
 
     await batch.commit();
     console.log('Cloud reset completed.');
+    return true;
   } catch (err) {
     console.error('Error resetting Firestore data:', err);
+    return false;
   }
 }

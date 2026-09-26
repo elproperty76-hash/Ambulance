@@ -217,21 +217,21 @@ export default function App() {
     });
 
     const unsubDrivers = subscribeDrivers((cloudDrivers) => {
-      if (Array.isArray(cloudDrivers)) {
+      if (Array.isArray(cloudDrivers) && cloudDrivers.length > 0) {
         setDrivers(cloudDrivers);
         saveDrivers(cloudDrivers);
       }
     });
 
     const unsubRelawan = subscribeRelawan((cloudRelawan) => {
-      if (Array.isArray(cloudRelawan)) {
+      if (Array.isArray(cloudRelawan) && cloudRelawan.length > 0) {
         setRelawan(cloudRelawan);
         saveRelawan(cloudRelawan);
       }
     });
 
     const unsubCallCenters = subscribeCallCenters((cloudCC) => {
-      if (Array.isArray(cloudCC)) {
+      if (Array.isArray(cloudCC) && cloudCC.length > 0) {
         setCallCenters(cloudCC);
         saveCallCenters(cloudCC);
       }
@@ -577,16 +577,15 @@ export default function App() {
 
   // Handler: Update fleet
   const handleUpdateFleet = (newFleet: FleetVehicle) => {
+    const targetId = newFleet.id || (fleets.length > 0 ? fleets[0].id : 'fleet-01');
+    const fleetToSave: FleetVehicle = {
+      ...newFleet,
+      id: targetId,
+    };
+    saveFleetCloud(fleetToSave);
+
     setFleets((prev) => {
-      const targetId = newFleet.id;
-      // Match by ID, or by platNomor, or if only 1 vehicle exists match index 0
-      let matchIdx = -1;
-      if (targetId) {
-        matchIdx = prev.findIndex((f) => f.id === targetId);
-      }
-      if (matchIdx < 0 && newFleet.platNomor) {
-        matchIdx = prev.findIndex((f) => f.platNomor === newFleet.platNomor);
-      }
+      let matchIdx = prev.findIndex((f) => f.id === fleetToSave.id || f.platNomor === fleetToSave.platNomor);
       if (matchIdx < 0 && prev.length === 1) {
         matchIdx = 0;
       }
@@ -595,15 +594,9 @@ export default function App() {
       if (matchIdx >= 0) {
         updatedList = prev.map((f, idx) => {
           if (idx === matchIdx) {
-            const mod: FleetVehicle = {
-              ...f,
-              ...newFleet,
-              id: newFleet.id || f.id || `fleet-${String(idx + 1).padStart(2, '0')}`,
-            };
-            saveFleetCloud(mod);
-            return mod;
+            return fleetToSave;
           }
-          if (newFleet.isUtama) {
+          if (fleetToSave.isUtama) {
             const mod: FleetVehicle = { ...f, isUtama: false };
             saveFleetCloud(mod);
             return mod;
@@ -611,17 +604,16 @@ export default function App() {
           return f;
         });
       } else {
-        if (newFleet.isUtama) {
+        if (fleetToSave.isUtama) {
           updatedList = prev.map((f) => {
             const mod: FleetVehicle = { ...f, isUtama: false };
             saveFleetCloud(mod);
             return mod;
           });
-          updatedList.push(newFleet);
+          updatedList.push(fleetToSave);
         } else {
-          updatedList = [...prev, newFleet];
+          updatedList = [...prev, fleetToSave];
         }
-        saveFleetCloud(newFleet);
       }
 
       // Ensure at least one vehicle has isUtama
@@ -672,11 +664,14 @@ export default function App() {
 
   // Handler: Delete fleet
   const handleDeleteFleet = (fleetIdOrPlat: string) => {
+    if (fleets.length <= 1) {
+      return;
+    }
+    const target = fleets.find((f) => f.id === fleetIdOrPlat || f.platNomor === fleetIdOrPlat);
+    const targetId = target?.id || fleetIdOrPlat;
+    deleteFleetCloud(targetId);
+
     setFleets((prev) => {
-      if (prev.length <= 1) {
-        return prev;
-      }
-      const target = prev.find((f) => f.id === fleetIdOrPlat || f.platNomor === fleetIdOrPlat);
       const filtered = prev.filter(
         (f) => f.id !== fleetIdOrPlat && f.platNomor !== fleetIdOrPlat
       );
@@ -690,9 +685,6 @@ export default function App() {
         saveFleet(activePrimary);
       }
       saveFleets(filtered);
-      if (target?.id) {
-        deleteFleetCloud(target.id);
-      }
       return filtered;
     });
   };
