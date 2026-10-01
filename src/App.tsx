@@ -734,10 +734,17 @@ export default function App() {
     window.open(`https://wa.me/?text=${encoded}`, '_blank');
   };
 
-  // Quick Call handler
+  // Quick WhatsApp Chat handler
   const handleQuickCall = (phone: string, name: string) => {
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    window.location.href = `tel:${cleanPhone}`;
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '62' + cleanPhone.slice(1);
+    } else if (!cleanPhone.startsWith('62') && cleanPhone.length > 0) {
+      cleanPhone = '62' + cleanPhone;
+    }
+    const message = `Halo Bpk/Ibu ${name}, kami dari tim Dispatcher Ambulance Siaga FKW-BPA ingin berkoordinasi mengenai operasional ambulance siaga.`;
+    const encoded = encodeURIComponent(message);
+    window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
   };
 
   // Delete single trip

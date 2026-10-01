@@ -12,8 +12,8 @@ import {
 export const INITIAL_CALL_CENTERS: CallCenterContact[] = [
   {
     id: 'cc-01',
-    nama: 'Bpk. H. Sukmana',
-    jabatan: 'Koordinator Operasional / Posko Utama BPA',
+    nama: 'Bpk. Susandi Haryadi',
+    jabatan: 'Ketua FKW / Koordinator Posko Utama BPA',
     noHp: '0812-2345-6789',
     isUtama: true,
     tersedia24Jam: true,
@@ -60,7 +60,7 @@ export const INITIAL_TARIFF_CONFIG: TariffConfig = {
 
 export const INITIAL_FLEET: FleetVehicle = {
   id: 'fleet-01',
-  platNomor: 'D 1945 BPA',
+  platNomor: 'R 1872 MK',
   namaUnit: 'Ambulance Siaga Warga FKW-BPA',
   merk: 'Daihatsu Gran Max Minibus Medis',
   tahun: 2022,
@@ -68,7 +68,7 @@ export const INITIAL_FLEET: FleetVehicle = {
   kmSpidometer: 48250,
   kondisiBbmPersen: 85,
   kondisiOksigen: '2 Tabung Penuh (100% & 90%)',
-  penanggungJawab: 'Bpk. H. Sukmana (Ketua Divisi Operasional FKW)',
+  penanggungJawab: 'Bpk. Susandi Haryadi (Ketua FKW)',
   servisBerikutnya: '50.000 KM (Ganti Oli & Cek Rem)',
   isUtama: true,
   kelengkapan: [

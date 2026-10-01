@@ -413,7 +413,7 @@ export function downloadSuratJalanPdf(trip: AmbulanceTrip, fleet?: FleetVehicle)
     body: [
       [
         { content: 'Unit Kendaraan:', styles: { fontStyle: 'normal', textColor: slateMuted, cellWidth: 40 } },
-        { content: fleet ? `${fleet.namaUnit} (${fleet.platNomor})` : 'Daihatsu Gran Max (D 1945 BPA)', styles: { fontStyle: 'bold' } },
+        { content: fleet ? `${fleet.namaUnit} (${fleet.platNomor})` : 'Daihatsu Gran Max (R 1872 MK)', styles: { fontStyle: 'bold' } },
       ],
       [
         { content: 'Sopir / Driver:', styles: { fontStyle: 'normal', textColor: slateMuted } },

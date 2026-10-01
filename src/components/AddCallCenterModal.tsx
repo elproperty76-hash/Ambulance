@@ -99,7 +99,7 @@ export const AddCallCenterModal: React.FC<AddCallCenterModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Contoh: Bpk. H. Sukmana / Posko Utama FKW"
+              placeholder="Contoh: Bpk. Susandi Haryadi / Posko Utama FKW"
               value={nama}
               onChange={(e) => setNama(e.target.value)}
               className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-red-600 font-medium"

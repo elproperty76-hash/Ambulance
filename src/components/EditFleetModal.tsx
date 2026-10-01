@@ -58,7 +58,7 @@ export const EditFleetModal: React.FC<EditFleetModalProps> = ({
     fleet?.kondisiOksigen || '2 Tabung Siaga Penuh (100% & 90%)'
   );
   const [penanggungJawab, setPenanggungJawab] = useState(
-    fleet?.penanggungJawab || 'Bpk. H. Sukmana (Divisi Operasional FKW)'
+    fleet?.penanggungJawab || 'Bpk. Susandi Haryadi (Ketua FKW)'
   );
   const [servisBerikutnya, setServisBerikutnya] = useState(
     fleet?.servisBerikutnya || '50.000 KM (Ganti Oli & Cek Rem)'
@@ -196,7 +196,7 @@ export const EditFleetModal: React.FC<EditFleetModalProps> = ({
             <label className="block text-[11px] font-bold text-amber-950 flex items-center justify-between">
               <span>Nomor Polisi / Plat Kendaraan *</span>
               <span className="text-[9px] font-semibold text-amber-800">
-                Contoh: D 1945 BPA
+                Contoh: R 1872 MK
               </span>
             </label>
             <div className="relative">
@@ -204,7 +204,7 @@ export const EditFleetModal: React.FC<EditFleetModalProps> = ({
                 type="text"
                 value={platNomor}
                 onChange={(e) => setPlatNomor(e.target.value.toUpperCase())}
-                placeholder="D 1945 BPA"
+                placeholder="R 1872 MK"
                 required
                 className="w-full bg-white border-2 border-amber-400 focus:border-amber-600 rounded-lg px-3 py-2 text-sm font-mono font-black text-slate-900 tracking-wider shadow-xs outline-none uppercase"
               />
@@ -356,7 +356,7 @@ export const EditFleetModal: React.FC<EditFleetModalProps> = ({
                 type="text"
                 value={penanggungJawab}
                 onChange={(e) => setPenanggungJawab(e.target.value)}
-                placeholder="Bpk. H. Sukmana (Divisi Operasional)"
+                placeholder="Bpk. Susandi Haryadi (Ketua FKW)"
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-red-500 outline-none"
               />
             </div>

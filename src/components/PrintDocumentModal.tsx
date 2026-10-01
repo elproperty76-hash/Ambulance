@@ -137,7 +137,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                       <p className="font-bold">
                         {fleet
                           ? `${fleet.namaUnit} (${fleet.platNomor})`
-                          : 'Daihatsu Gran Max (D 1945 BPA)'}
+                          : 'Daihatsu Gran Max (R 1872 MK)'}
                       </p>
                     </div>
                     <div>

@@ -29,6 +29,7 @@ import {
   Zap,
   Radio,
   Gauge,
+  MessageCircle,
 } from 'lucide-react';
 import { formatRupiah, formatDateIndo } from '../utils/storage';
 
@@ -454,10 +455,10 @@ export const LiveOperationsTab: React.FC<LiveOperationsTabProps> = ({
                         onClick={() =>
                           onQuickCallDriver(trip.sopir.noHp, trip.sopir.nama)
                         }
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-md transition-colors cursor-pointer"
-                        title="Hubungi Driver"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white p-1.5 rounded-md transition-colors cursor-pointer flex items-center justify-center"
+                        title="Hubungi WA Driver"
                       >
-                        <Phone className="w-3 h-3" />
+                        <MessageCircle className="w-3.5 h-3.5" />
                       </button>
                       <button
                         id={`btn-call-pemohon-${trip.id}`}
@@ -467,10 +468,10 @@ export const LiveOperationsTab: React.FC<LiveOperationsTabProps> = ({
                             trip.pemohon.nama
                           )
                         }
-                        className="bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-md transition-colors cursor-pointer"
-                        title="Hubungi Pemohon / Keluarga"
+                        className="bg-teal-600 hover:bg-teal-700 text-white p-1.5 rounded-md transition-colors cursor-pointer flex items-center justify-center"
+                        title="Hubungi WA Pemohon / Keluarga"
                       >
-                        <User className="w-3 h-3" />
+                        <MessageCircle className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -682,10 +683,10 @@ export const LiveOperationsTab: React.FC<LiveOperationsTabProps> = ({
                   <button
                     id={`btn-call-duty-${drv.id}`}
                     onClick={() => onQuickCallDriver(drv.noHp, drv.nama)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-md cursor-pointer"
-                    title="Hubungi Driver Siaga"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-md cursor-pointer flex items-center justify-center"
+                    title="Hubungi WA Driver Siaga"
                   >
-                    <Phone className="w-3 h-3" />
+                    <MessageCircle className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -739,10 +740,10 @@ export const LiveOperationsTab: React.FC<LiveOperationsTabProps> = ({
                   <button
                     id={`btn-call-rel-${rel.id}`}
                     onClick={() => onQuickCallDriver(rel.noHp, rel.nama)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-md cursor-pointer"
-                    title="Hubungi Relawan Siaga"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white p-1 rounded-md cursor-pointer flex items-center justify-center"
+                    title="Hubungi WA Relawan Siaga"
                   >
-                    <Phone className="w-3 h-3" />
+                    <MessageCircle className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>

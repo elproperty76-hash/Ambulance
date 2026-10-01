@@ -143,7 +143,7 @@ export const AndroidHeader: React.FC<AndroidHeaderProps> = ({
         <div className="flex items-center space-x-2">
           <span className="text-slate-400">Unit:</span>
           <span className="text-amber-300 font-bold font-mono">
-            {fleetPlatNomor || 'D 1945 BPA'}
+            {fleetPlatNomor || 'R 1872 MK'}
           </span>
           <span className="text-slate-500">|</span>
           <span className="text-slate-400">Pool:</span>
