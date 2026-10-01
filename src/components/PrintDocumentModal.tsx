@@ -2,7 +2,11 @@ import React from 'react';
 import { AmbulanceTrip, FleetVehicle } from '../types';
 import { X, Printer, Download, ShieldCheck, Ambulance } from 'lucide-react';
 import { formatRupiah, formatDateIndo } from '../utils/storage';
-import { downloadMonthlyReportPdf } from '../utils/pdfGenerator';
+import {
+  downloadMonthlyReportPdf,
+  downloadSuratJalanPdf,
+  downloadKuitansiPdf,
+} from '../utils/pdfGenerator';
 
 export type DocumentType = 'surat_jalan' | 'kuitansi' | 'laporan_bulanan';
 
@@ -33,6 +37,10 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
         monthLabel: monthLabel || 'Bulanan',
         monthlyTrips,
       });
+    } else if (docType === 'surat_jalan' && trip) {
+      downloadSuratJalanPdf(trip, fleet);
+    } else if (docType === 'kuitansi' && trip) {
+      downloadKuitansiPdf(trip);
     }
   };
 
@@ -52,17 +60,15 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-1.5">
-            {docType === 'laporan_bulanan' && monthlyTrips && (
-              <button
-                type="button"
-                onClick={handleDownloadPdf}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 cursor-pointer shadow-xs transition-colors"
-                title="Unduh berkas PDF rekapitulasi data perjalanan bulan ini"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Unduh File PDF</span>
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 cursor-pointer shadow-xs transition-colors"
+              title="Unduh dokumen dalam format PDF berkualitas tinggi"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Unduh PDF</span>
+            </button>
             <button
               onClick={handlePrint}
               className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1 cursor-pointer shadow-xs transition-colors"
@@ -80,7 +86,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
         </div>
 
         {/* PRINTABLE DOCUMENT CONTAINER */}
-        <div className="p-6 sm:p-8 bg-white text-slate-900 font-sans leading-relaxed print:p-4 print:text-black">
+        <div className="printable-document p-6 sm:p-8 bg-white text-slate-900 font-sans leading-relaxed print:p-4 print:text-black">
           {/* ================= 1. SURAT JALAN ================= */}
           {docType === 'surat_jalan' && trip && (
             <div className="space-y-6">
@@ -292,7 +298,7 @@ export const PrintDocumentModal: React.FC<PrintDocumentModalProps> = ({
                   </div>
                   <div className="flex justify-between text-slate-600">
                     <span>
-                      Biaya Kendaraan ({trip.biaya.tipeBiayaKendaraan === 'external' || trip.pemohon.tipeWarga === 'non_warga' ? 'External' : 'Internal'}):
+                      Biaya Kendaraan ({(trip.biaya.tipeBiayaKendaraan || (trip.pemohon.tipeWarga === 'non_warga' ? 'external' : 'internal')) === 'internal' ? 'Internal' : 'External'}):
                     </span>
                     <span>
                       {formatRupiah(trip.biaya.biayaKendaraan ?? (trip.pemohon.tipeWarga === 'non_warga' ? 100000 : 50000))}

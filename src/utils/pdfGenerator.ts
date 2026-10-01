@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AmbulanceTrip } from '../types';
+import { AmbulanceTrip, FleetVehicle } from '../types';
 import { formatRupiah, formatDateIndo } from './storage';
 
 export interface MonthlyReportPdfOptions {
@@ -326,3 +326,364 @@ export function downloadMonthlyReportPdf(options: MonthlyReportPdfOptions): void
   const sanitizedPeriod = monthLabel.replace(/[^a-zA-Z0-9]/g, '-');
   doc.save(`Rekapitulasi-Perjalanan-Ambulance-FKW-BPA-${sanitizedPeriod}.pdf`);
 }
+
+/**
+ * Downloads a beautifully formatted Surat Jalan PDF
+ */
+export function downloadSuratJalanPdf(trip: AmbulanceTrip, fleet?: FleetVehicle): void {
+  // Initialize jsPDF in portrait A4 format (210mm x 297mm)
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  const redPrimary: [number, number, number] = [185, 28, 28]; // #b91c1c
+  const slateDark: [number, number, number] = [30, 41, 59]; // #1e293b
+  const slateMuted: [number, number, number] = [100, 116, 139]; // #64748b
+
+  // Top Accent Banner
+  doc.setFillColor(redPrimary[0], redPrimary[1], redPrimary[2]);
+  doc.rect(0, 0, pageWidth, 4, 'F');
+
+  // Kop Surat
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
+  doc.text('FORUM KOMUNIKASI WARGA (FKW) BUMI PESONA ASRI', pageWidth / 2, 14, {
+    align: 'center',
+  });
+
+  doc.setFontSize(10.5);
+  doc.setTextColor(redPrimary[0], redPrimary[1], redPrimary[2]);
+  doc.text('DIVISI OPERASIONAL AMBULANCE SIAGA WARGA 24 JAM', pageWidth / 2, 18.5, {
+    align: 'center',
+  });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(slateMuted[0], slateMuted[1], slateMuted[2]);
+  doc.text(
+    'Perumahan Bumi Pesona Asri, Kec. Rancaekek, Kab. Bandung 40394 | Sekretariat FKW-BPA',
+    pageWidth / 2,
+    22.5,
+    { align: 'center' }
+  );
+
+  // Line Divider
+  doc.setDrawColor(30, 41, 59);
+  doc.setLineWidth(0.5);
+  doc.line(14, 25, pageWidth - 14, 25);
+
+  // Document Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
+  doc.text('SURAT TUGAS & SURAT JALAN AMBULANCE', pageWidth / 2, 32, { align: 'center' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text(`Nomor: ${trip.ticketNumber}`, pageWidth / 2, 36, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(
+    'Yang bertanda tangan di bawah ini Pengurus Divisi Ambulance Forum Komunikasi Warga (FKW) Bumi Pesona Asri Rancaekek, menerangkan bahwa:',
+    14,
+    44,
+    { maxWidth: pageWidth - 28 }
+  );
+
+  let currentY = 51;
+
+  // I. DATA ARMADA & PETUGAS
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(redPrimary[0], redPrimary[1], redPrimary[2]);
+  doc.text('I. DATA ARMADA & PETUGAS', 14, currentY);
+  currentY += 4;
+
+  autoTable(doc, {
+    startY: currentY,
+    theme: 'grid',
+    head: [],
+    body: [
+      [
+        { content: 'Unit Kendaraan:', styles: { fontStyle: 'normal', textColor: slateMuted, cellWidth: 40 } },
+        { content: fleet ? `${fleet.namaUnit} (${fleet.platNomor})` : 'Daihatsu Gran Max (D 1945 BPA)', styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Sopir / Driver:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: `${trip.sopir.nama} (SIM: ${trip.sopir.nomorSim || '-'})`, styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Relawan Pendamping:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: `${trip.relawan.nama} (${trip.relawan.timPendamping || '-'})`, styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Tanggal / Jam Berangkat:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: `${formatDateIndo(trip.requestDate)} / ${trip.requestTime} WIB`, styles: { fontStyle: 'bold' } },
+      ],
+    ],
+    styles: { fontSize: 8.5, cellPadding: 1.8 },
+    margin: { left: 14, right: 14 },
+  });
+
+  // @ts-ignore
+  currentY = doc.lastAutoTable.finalY + 6;
+
+  // II. DATA PEMOHON & PASIEN
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(redPrimary[0], redPrimary[1], redPrimary[2]);
+  doc.text('II. DATA PEMOHON & PASIEN', 14, currentY);
+  currentY += 4;
+
+  autoTable(doc, {
+    startY: currentY,
+    theme: 'grid',
+    head: [],
+    body: [
+      [
+        { content: 'Nama Pemohon:', styles: { fontStyle: 'normal', textColor: slateMuted, cellWidth: 40 } },
+        { content: `${trip.pemohon.nama} (${trip.pemohon.hubungan})`, styles: { fontStyle: 'bold' } },
+        { content: 'No. Kontak Pemohon:', styles: { fontStyle: 'normal', textColor: slateMuted, cellWidth: 40 } },
+        { content: trip.pemohon.noHp || '-', styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Nama Pasien:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: `${trip.pasien.nama} (${trip.pasien.usia} th / ${trip.pasien.jenisKelamin})`, styles: { fontStyle: 'bold' } },
+        { content: 'Diagnosa / Keluhan:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: trip.pasien.diagnosaKeluhan, styles: { fontStyle: 'bold', textColor: [185, 28, 28] } },
+      ],
+      [
+        { content: 'Alamat Penjemputan:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: trip.pemohon.alamatLengkap, styles: { fontStyle: 'bold' }, colSpan: 3 },
+      ],
+    ],
+    styles: { fontSize: 8.5, cellPadding: 1.8 },
+    margin: { left: 14, right: 14 },
+  });
+
+  // @ts-ignore
+  currentY = doc.lastAutoTable.finalY + 6;
+
+  // III. TUJUAN RUJUKAN & PERALATAN
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);
+  doc.setTextColor(redPrimary[0], redPrimary[1], redPrimary[2]);
+  doc.text('III. TUJUAN RUJUKAN & PERALATAN', 14, currentY);
+  currentY += 4;
+
+  autoTable(doc, {
+    startY: currentY,
+    theme: 'grid',
+    head: [],
+    body: [
+      [
+        { content: 'Tempat Tujuan:', styles: { fontStyle: 'normal', textColor: slateMuted, cellWidth: 40 } },
+        { content: trip.tujuan.namaTujuan, styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Estimasi Jarak Tempuh:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: `${trip.tujuan.jarakKm} KM`, styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Peralatan Medis Terpasang:', styles: { fontStyle: 'normal', textColor: slateMuted } },
+        { content: (trip.pasien.kebutuhanAlat || []).join(', ') || 'Standar P3K', styles: { fontStyle: 'bold' } },
+      ],
+    ],
+    styles: { fontSize: 8.5, cellPadding: 1.8 },
+    margin: { left: 14, right: 14 },
+  });
+
+  // @ts-ignore
+  currentY = doc.lastAutoTable.finalY + 12;
+
+  // Signatures
+  if (currentY > pageHeight - 45) {
+    doc.addPage();
+    currentY = 25;
+  }
+
+  const signWidth = (pageWidth - 28) / 3;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
+
+  // Sign 1: Pemohon
+  doc.text('Pemohon / Keluarga', 14 + signWidth * 0.5, currentY, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(trip.pemohon.nama, 14 + signWidth * 0.5, currentY + 22, { align: 'center' });
+
+  // Sign 2: Sopir Bertugas
+  doc.setFont('helvetica', 'normal');
+  doc.text('Sopir Bertugas', 14 + signWidth * 1.5, currentY, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(trip.sopir.nama, 14 + signWidth * 1.5, currentY + 22, { align: 'center' });
+
+  // Sign 3: Ketua FKW
+  doc.setFont('helvetica', 'normal');
+  doc.text('Ketua FKW BPA', 14 + signWidth * 2.5, currentY, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text('Susandi Haryadi', 14 + signWidth * 2.5, currentY + 22, { align: 'center' });
+
+  doc.save(`Surat-Jalan-Ambulance-${trip.ticketNumber}.pdf`);
+}
+
+/**
+ * Downloads a beautifully formatted Kuitansi / Receipt PDF
+ */
+export function downloadKuitansiPdf(trip: AmbulanceTrip): void {
+  // Initialize jsPDF in portrait A5 format (148mm x 210mm) for a realistic voucher size
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a5',
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  const redPrimary: [number, number, number] = [185, 28, 28]; // #b91c1c
+  const slateDark: [number, number, number] = [30, 41, 59]; // #1e293b
+  const slateMuted: [number, number, number] = [100, 116, 139]; // #64748b
+
+  // Top Accent Banner
+  doc.setFillColor(redPrimary[0], redPrimary[1], redPrimary[2]);
+  doc.rect(0, 0, pageWidth, 3, 'F');
+
+  // Kop Surat
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
+  doc.text('FORUM KOMUNIKASI WARGA (FKW) BUMI PESONA ASRI', pageWidth / 2, 10, {
+    align: 'center',
+  });
+
+  doc.setFontSize(8.5);
+  doc.setTextColor(redPrimary[0], redPrimary[1], redPrimary[2]);
+  doc.text('TANDA TERIMA / KUITANSI OPERASIONAL AMBULANCE', pageWidth / 2, 14, {
+    align: 'center',
+  });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(slateMuted[0], slateMuted[1], slateMuted[2]);
+  doc.text(
+    'Sekretariat FKW Perumahan Bumi Pesona Asri, Rancaekek, Kab. Bandung',
+    pageWidth / 2,
+    17.5,
+    { align: 'center' }
+  );
+
+  // Line Divider
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.4);
+  doc.line(10, 20, pageWidth - 10, 20);
+
+  // Invoice Meta
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
+  doc.text(`No. Kuitansi: ${trip.biaya.noKuitansi || trip.ticketNumber}`, 10, 25);
+  doc.text(`Tanggal: ${formatDateIndo(trip.requestDate)}`, pageWidth - 10, 25, { align: 'right' });
+
+  let currentY = 29;
+
+  // Detail Fields Table
+  autoTable(doc, {
+    startY: currentY,
+    theme: 'plain',
+    head: [],
+    body: [
+      [
+        { content: 'Telah Diterima Dari:', styles: { textColor: slateMuted, cellWidth: 32 } },
+        { content: `${trip.pemohon.nama} (${trip.pemohon.blokRumah || '-'})`, styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Nama Pasien:', styles: { textColor: slateMuted } },
+        { content: `${trip.pasien.nama} (Tujuan: ${trip.tujuan.namaTujuan})`, styles: { fontStyle: 'bold' } },
+      ],
+      [
+        { content: 'Skema Layanan:', styles: { textColor: slateMuted } },
+        { content: trip.biaya.skemaTarif.replace(/_/g, ' ').toUpperCase(), styles: { fontStyle: 'bold', textColor: [4, 120, 87] } },
+      ],
+    ],
+    styles: { fontSize: 8, cellPadding: 1.2 },
+    margin: { left: 10, right: 10 },
+  });
+
+  // @ts-ignore
+  currentY = doc.lastAutoTable.finalY + 3;
+
+  // Cost Components Breakdown Table
+  const vehicleCostTypeLabel = (trip.biaya.tipeBiayaKendaraan || (trip.pemohon.tipeWarga === 'non_warga' ? 'external' : 'internal')) === 'internal' ? 'Internal' : 'External';
+  const defaultVehCost = trip.pemohon.tipeWarga === 'non_warga' ? 100000 : 50000;
+
+  autoTable(doc, {
+    startY: currentY,
+    theme: 'grid',
+    head: [
+      [
+        { content: 'Komponen Operasional', styles: { halign: 'left', fillColor: slateDark, textColor: [255, 255, 255] } },
+        { content: 'Jumlah (Rp)', styles: { halign: 'right', fillColor: slateDark, textColor: [255, 255, 255] } },
+      ]
+    ],
+    body: [
+      ['Biaya Operasional Dasar', formatRupiah(trip.biaya.biayaOperasional)],
+      [`Biaya Kendaraan (${vehicleCostTypeLabel})`, formatRupiah(trip.biaya.biayaKendaraan ?? defaultVehCost)],
+      ['Bahan Bakar Minyak (BBM)', formatRupiah(trip.bbm.biayaBbm)],
+      ['Biaya Tol & Parkir', formatRupiah(trip.biaya.biayaTolParkir)],
+      [
+        { content: 'Subsidi Kas Sosial FKW-BPA', styles: { fontStyle: 'italic', textColor: [4, 120, 87] } },
+        { content: `- ${formatRupiah(trip.biaya.potonganSubsidi)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [4, 120, 87] } }
+      ],
+      [
+        { content: 'TOTAL DIBAYARKAN / INFAQ', styles: { fontStyle: 'bold', fillColor: [248, 250, 252] } },
+        {
+          content: trip.biaya.totalTagihan === 0 ? 'Rp 0 (GRATIS)' : formatRupiah(trip.biaya.totalTagihan),
+          styles: { halign: 'right', fontStyle: 'bold', textColor: redPrimary, fontSize: 9, fillColor: [248, 250, 252] }
+        }
+      ]
+    ],
+    styles: { fontSize: 7.5, cellPadding: 1.5 },
+    columnStyles: {
+      0: { halign: 'left' },
+      1: { halign: 'right', cellWidth: 35, fontStyle: 'bold' }
+    },
+    margin: { left: 10, right: 10 },
+  });
+
+  // @ts-ignore
+  currentY = doc.lastAutoTable.finalY + 8;
+
+  if (currentY > pageHeight - 35) {
+    doc.addPage();
+    currentY = 15;
+  }
+
+  const signWidth = (pageWidth - 20) / 2;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(slateDark[0], slateDark[1], slateDark[2]);
+
+  // Sign 1: Sopir Bertugas
+  doc.text('Sopir Bertugas,', 10 + signWidth * 0.5, currentY, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(trip.sopir.nama, 10 + signWidth * 0.5, currentY + 16, { align: 'center' });
+
+  // Sign 2: Penerima Kas / Ketua FKW
+  doc.setFont('helvetica', 'normal');
+  doc.text('Penerima / Keluarga,', 10 + signWidth * 1.5, currentY, { align: 'center' });
+  doc.setFont('helvetica', 'bold');
+  doc.text(trip.pemohon.nama, 10 + signWidth * 1.5, currentY + 16, { align: 'center' });
+
+  doc.save(`Kuitansi-Ambulance-${trip.ticketNumber}.pdf`);
+}
+

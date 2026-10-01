@@ -268,7 +268,7 @@ export const TripDetailModal: React.FC<TripDetailModalProps> = ({
                   <span className="text-slate-500 block">Biaya Kendaraan:</span>
                   <strong className="text-indigo-700">
                     {formatRupiah(trip.biaya.biayaKendaraan ?? (trip.pemohon?.tipeWarga === 'non_warga' ? 100000 : 50000))}
-                    {' '}({trip.biaya.tipeBiayaKendaraan || (trip.pemohon?.tipeWarga === 'non_warga' ? 'External' : 'Internal')})
+                    {' '}({(trip.biaya.tipeBiayaKendaraan || (trip.pemohon?.tipeWarga === 'non_warga' ? 'external' : 'internal')) === 'internal' ? 'Internal' : 'External'})
                   </strong>
                 </div>
                 <div>
